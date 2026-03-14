@@ -5,6 +5,8 @@ const path = require("node:path");
 const errorMiddleware = require("./middlewares/errorMiddleware");
 const webRouter = require("./routes/web");
 const passport = require("passport");
+const { PrismaSessionStore } = require("@quixo3/prisma-session-store");
+const { prisma } = require("./lib/prisma");
 
 /**
  * -------------- GENERAL SETUP ----------------
@@ -21,11 +23,17 @@ app.use(express.urlencoded({ extended: true }));
  * -------------- SESSION SETUP ----------------
  */
 
+const sessionStore = new PrismaSessionStore(prisma, {
+  checkPeriod: 2 * 60 * 1000, //ms
+  dbRecordIdIsSessionId: true,
+  dbRecordIdFunction: undefined,
+});
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: true,
+    store: sessionStore,
     cookie: {
       maxAge: 1000 * 60 * 60 * 24, // Equals 1 day (1 day * 24 hr/1 day * 60 min/1 hr * 60 sec/1 min * 1000 ms / 1 sec)
     },
