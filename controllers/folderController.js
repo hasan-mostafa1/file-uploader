@@ -6,6 +6,7 @@ const {
 } = require("express-validator");
 const auth = require("../middlewares/authMiddleware");
 const { prisma } = require("../lib/prisma");
+const upload = require("../config/multer");
 
 const validateFolder = [
   body("name")
@@ -108,6 +109,7 @@ module.exports.show = [
       where: { id: +req.params.id },
       include: {
         folders: true,
+        files: true,
       },
     });
 
@@ -144,6 +146,26 @@ module.exports.update = [
     });
 
     res.redirect(`/folders/${folder.id}`);
+  },
+];
+
+module.exports.uploadFile = [
+  auth,
+  folderExists,
+  upload.single("file"),
+  async (req, res) => {
+    await prisma.file.create({
+      data: {
+        fileName: req.file.filename,
+        originalName: req.file.originalname,
+        contentType: req.file.mimetype,
+        size: req.file.size,
+        folderId: +req.params.id,
+        ownerId: req.user.id,
+      },
+    });
+
+    res.redirect(`/folders/${req.params.id}`);
   },
 ];
 

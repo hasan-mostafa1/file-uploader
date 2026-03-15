@@ -19,6 +19,7 @@ model User {
   email     String   @unique
   password  String
   folders   Folder[]
+  files     File[]
 
   @@map("users")
 }
@@ -36,8 +37,24 @@ model Folder {
   parent   Folder?  @relation("foldersHierarchy", fields: [parentId], references: [id])
   parentId Int?
   folders  Folder[] @relation("foldersHierarchy")
+  files    File[]
   owner    User     @relation(fields: [ownerId], references: [id])
   ownerId  Int
 
   @@map("folders")
+}
+
+model File {
+  id           Int      @id @default(autoincrement())
+  fileName     String   @map("file_name")
+  originalName String   @map("original_name")
+  contentType  String?  @map("content_type")
+  size         Int
+  folder       Folder?  @relation(fields: [folderId], references: [id])
+  folderId     Int?     @map("folder_id")
+  owner        User     @relation(fields: [ownerId], references: [id])
+  ownerId      Int      @map("owner_id")
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+
+  @@map("files")
 }
