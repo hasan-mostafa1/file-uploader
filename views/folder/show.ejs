@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%=locals.folder.name%></title>
+</head>
+<body>
+    <h1><%= locals.folder.name%></h1>
+    <a href="/folders/<%= locals.folder.id %>/edit">Edit</a>
+    <form action="/folders/<%= locals.folder.id %>/delete" method="post"> <button type="submit">Delete</button></form>
+    <hr>
+    <h2>Create new folder</h2>
+    <%- include('../partials/errors', {errors:locals.errors}) %>
+    <form action="/folders/<%=locals.folder.id%>/create" method="post">
+        <label for="name">Name:</label>
+        <input type="text" name="name" id="name">
+        <button type="submit">Create</button>
+    </form>
+    <hr>
+    <ul>
+    <% locals.folder.folders?.forEach((folder)=>{%>
+            <li><a href="/folders/<%=folder.id%>">/<%=folder.name%></a></li>
+    <%})%>
+    </ul>
+</body>
+</html>

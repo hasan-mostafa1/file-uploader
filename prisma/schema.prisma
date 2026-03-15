@@ -13,11 +13,12 @@ datasource db {
 }
 
 model User {
-  id        Int    @id @default(autoincrement())
-  firstName String @map("first_name")
-  lastName  String @map("last_name")
-  email     String @unique
+  id        Int      @id @default(autoincrement())
+  firstName String   @map("first_name")
+  lastName  String   @map("last_name")
+  email     String   @unique
   password  String
+  folders   Folder[]
 
   @@map("users")
 }
@@ -27,4 +28,16 @@ model Session {
   sid       String   @unique
   data      String
   expiresAt DateTime
+}
+
+model Folder {
+  id       Int      @id @default(autoincrement())
+  name     String
+  parent   Folder?  @relation("foldersHierarchy", fields: [parentId], references: [id])
+  parentId Int?
+  folders  Folder[] @relation("foldersHierarchy")
+  owner    User     @relation(fields: [ownerId], references: [id])
+  ownerId  Int
+
+  @@map("folders")
 }

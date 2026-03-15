@@ -57,14 +57,6 @@ const validateUser = [
     }),
 ];
 
-module.exports.home = (req, res) => {
-  if (req.isAuthenticated()) {
-    res.redirect("/profile");
-  } else {
-    res.redirect("/signup");
-  }
-};
-
 module.exports.getSignup = (req, res) => {
   res.render("auth/signup");
 };

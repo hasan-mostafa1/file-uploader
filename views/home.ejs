@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+</head>
+<body>
+    <h1>Welcome back <%= locals.user.firstName%></h1>
+    <p>Check out your <a href="/profile">profile</a>!</p>
+    <hr>
+    <h2>Create new folder</h2>
+    <%- include('partials/errors', {errors:locals.errors}) %>
+    <form action="/folders/create" method="post">
+        <label for="name">Name:</label>
+        <input type="text" name="name" id="name">
+        <button type="submit">Create</button>
+    </form>
+    <hr>
+    <ul>
+    <% user.folders?.forEach((folder)=>{%>
+        <% if(!folder.parentId){%>
+            <li><a href="/folders/<%=folder.id%>">/<%=folder.name%></a></li>
+        <%}%>
+    <%})%>
+    </ul>
+</body>
+</html>

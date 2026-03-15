@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit folder</title>
+</head>
+<body>
+    <h2>Edit folder</h2>
+    <%- include('../partials/errors', {errors:locals.errors}) %>
+    <form action="/folders/<%= locals.folder.id %>/update" method="post">
+        <label for="name">Name:</label>
+        <input type="text" name="name" id="name" value="<%= locals.folder.name %>">
+        <button type="submit">update</button>
+    </form>
+</body>
+</html>
