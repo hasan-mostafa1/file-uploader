@@ -58,6 +58,9 @@ const validateUser = [
 ];
 
 module.exports.getSignup = (req, res) => {
+  if (req.isAuthenticated()) {
+    return res.redirect("/");
+  }
   res.render("auth/signup");
 };
 
@@ -83,6 +86,9 @@ module.exports.postSignup = [
 ];
 
 module.exports.getLogin = (req, res) => {
+  if (req.isAuthenticated()) {
+    return res.redirect("/");
+  }
   res.render("auth/login");
 };
 
