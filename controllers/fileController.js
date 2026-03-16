@@ -1,15 +1,41 @@
 const { prisma } = require("../lib/prisma");
-const { param, validationResult } = require("express-validator");
 const auth = require("../middlewares/authMiddleware");
 const checkFile = require("../middlewares/checkFileMiddleware");
 const upload = require("../config/multer");
 const supabase = require("../lib/supabase");
 const { decode } = require("base64-arraybuffer");
+const { check, validationResult } = require("express-validator");
+
+const validateFile = [
+  check("file").custom((value, { req }) => {
+    if (!req.file) {
+      throw new Error("File is required");
+    }
+    // Validate MIME type
+    if (req.file.mimetype !== "application/pdf") {
+      throw new Error("Only PDF documents are allowed");
+    }
+    // Validate file size (e.g., max 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2 MB
+    if (req.file.size > maxSize) {
+      throw new Error("File is too large (max 2MB)");
+    }
+    return true;
+  }),
+];
 
 module.exports.uploadFile = [
   auth,
   upload.single("file"),
+  validateFile,
   async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res
+        .status(400)
+        .render("home", { user: req.user, fileErrors: errors.array() });
+    }
+
     const fileBase64 = decode(req.file.buffer.toString("base64"));
     const { data, error } = await supabase.storage
       .from("uploads")

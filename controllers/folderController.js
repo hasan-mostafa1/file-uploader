@@ -1,6 +1,6 @@
 const {
   body,
-  param,
+  check,
   matchedData,
   validationResult,
 } = require("express-validator");
@@ -22,13 +22,33 @@ const validateFolder = [
     .withMessage("name must be a string"),
 ];
 
+const validateFile = [
+  check("file").custom((value, { req }) => {
+    if (!req.file) {
+      throw new Error("File is required");
+    }
+    // Validate MIME type
+    if (req.file.mimetype !== "application/pdf") {
+      throw new Error("Only PDF documents are allowed");
+    }
+    // Validate file size (e.g., max 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2 MB
+    if (req.file.size > maxSize) {
+      throw new Error("File is too large (max 2MB)");
+    }
+    return true;
+  }),
+];
+
 module.exports.store = [
   auth,
   validateFolder,
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      res.status(400).render("home", { errors: errors.array() });
+      res
+        .status(400)
+        .render("home", { user: req.user, errors: errors.array() });
     }
     const { name } = matchedData(req);
     await prisma.folder.create({
@@ -132,7 +152,15 @@ module.exports.uploadFile = [
   auth,
   checkFolder,
   upload.single("file"),
+  validateFile,
   async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res
+        .status(400)
+        .render("home", { user: req.user, fileErrors: errors.array() });
+    }
+
     const fileBase64 = decode(req.file.buffer.toString("base64"));
     const { data, error } = await supabase.storage
       .from("uploads")

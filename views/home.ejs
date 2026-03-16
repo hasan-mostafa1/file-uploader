@@ -17,7 +17,7 @@
         <button type="submit">Create</button>
     </form>
     <h2>Upload new file</h2>
-    <%- include('partials/errors', {errors:locals.errors}) %>
+    <%- include('partials/errors', {errors:locals.fileErrors}) %>
     <form action="/files/upload" method="post" enctype="multipart/form-data">
         <label for="name">file:</label>
         <input type="file" name="file" id="name" required>
