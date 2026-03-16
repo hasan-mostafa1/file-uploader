@@ -190,9 +190,34 @@ module.exports.destroy = [
   auth,
   checkFolder,
   async (req, res) => {
-    await prisma.folder.delete({
-      where: { id: +req.params.id },
+    const filesInFolder = await prisma.file.findMany({
+      where: {
+        folderId: +req.params.id,
+      },
+      select: {
+        path: true, // Select only the path
+      },
     });
+    const filePaths = filesInFolder.map((file) => file.path);
+
+    // Delete folder and files records
+    await prisma.$transaction(async (tx) => {
+      await tx.file.deleteMany({
+        where: { folderId: +req.params.id },
+      });
+
+      await tx.folder.delete({
+        where: { id: +req.params.id },
+      });
+    });
+
+    // Delete actual files on supabase storage
+    const { data, error } = await supabase.storage
+      .from("uploads")
+      .remove(filePaths);
+    if (error) {
+      throw error;
+    }
 
     res.redirect("/");
   },
