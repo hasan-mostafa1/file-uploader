@@ -46,10 +46,10 @@ model Folder {
 
 model File {
   id           Int      @id @default(autoincrement())
-  fileName     String   @map("file_name")
   originalName String   @map("original_name")
   contentType  String?  @map("content_type")
   size         Int
+  path         String
   folder       Folder?  @relation(fields: [folderId], references: [id])
   folderId     Int?     @map("folder_id")
   owner        User     @relation(fields: [ownerId], references: [id])

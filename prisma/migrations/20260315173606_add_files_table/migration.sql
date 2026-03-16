@@ -1,10 +1,10 @@
 -- CreateTable
 CREATE TABLE "files" (
     "id" SERIAL NOT NULL,
-    "file_name" TEXT NOT NULL,
     "original_name" TEXT NOT NULL,
     "content_type" TEXT,
     "size" INTEGER NOT NULL,
+    "path" TEXT NOT NULL,
     "folder_id" INTEGER,
     "owner_id" INTEGER NOT NULL,
     "uploaded_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

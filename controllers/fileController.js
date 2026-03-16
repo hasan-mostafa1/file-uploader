@@ -1,45 +1,31 @@
 const { prisma } = require("../lib/prisma");
 const { param, validationResult } = require("express-validator");
 const auth = require("../middlewares/authMiddleware");
+const checkFile = require("../middlewares/checkFileMiddleware");
 const upload = require("../config/multer");
-const path = require("node:path");
-const fs = require("node:fs/promises");
-
-const fileExists = [
-  param("id")
-    .exists()
-    .withMessage("file id is required")
-    .trim()
-    .notEmpty()
-    .withMessage("file id can't be empty")
-    .custom(async (value) => {
-      const existingFile = await prisma.file.findUnique({
-        where: { id: +value },
-      });
-      if (!existingFile) {
-        throw new Error("Unvalid file id!");
-      }
-      return true;
-    }),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(404).send(errors.array()[0].msg);
-    }
-    next();
-  },
-];
+const supabase = require("../lib/supabase");
+const { decode } = require("base64-arraybuffer");
 
 module.exports.uploadFile = [
   auth,
   upload.single("file"),
   async (req, res) => {
+    const fileBase64 = decode(req.file.buffer.toString("base64"));
+    const { data, error } = await supabase.storage
+      .from("uploads")
+      .upload(req.file.originalname, fileBase64, {
+        contentType: req.file.mimetype,
+      });
+    if (error) {
+      throw error;
+    }
+
     await prisma.file.create({
       data: {
-        fileName: req.file.filename,
         originalName: req.file.originalname,
         contentType: req.file.mimetype,
         size: req.file.size,
+        path: data.path,
         ownerId: req.user.id,
       },
     });
@@ -50,41 +36,57 @@ module.exports.uploadFile = [
 
 module.exports.show = [
   auth,
-  fileExists,
+  checkFile,
   async (req, res) => {
     const file = await prisma.file.findUnique({
       where: { id: +req.params.id },
     });
+
     res.render("file/show", { file: file });
   },
 ];
 
 module.exports.downloadFile = [
   auth,
-  fileExists,
+  checkFile,
   async (req, res, next) => {
     const file = await prisma.file.findUnique({
       where: { id: +req.params.id },
     });
-    const filePath = path.join(__dirname, "../storage/uploads", file.fileName);
 
-    try {
-      await fs.access(filePath, fs.constants.R_OK);
-      res.download(filePath, file.originalName, (err) => {
-        if (err) {
-          next(err);
-        }
-      });
-    } catch (err) {
-      next(err);
+    const { data, error } = await supabase.storage
+      .from("uploads")
+      .download(file.path);
+
+    if (error) {
+      throw error;
     }
+
+    const buffer = Buffer.from(await data.arrayBuffer());
+    res
+      .set({
+        "content-type": data.type,
+        "Content-Disposition": `attachment; filename="${file.originalName}"`,
+      })
+      .send(buffer);
   },
 ];
 
 module.exports.destroy = [
   auth,
-  fileExists,
+  checkFile,
   async (req, res) => {
+    const file = await prisma.file.findUnique({
+      where: { id: +req.params.id },
+    });
+
+    const { data, error } = await supabase.storage
+      .from("uploads")
+      .remove([file.path]);
+    if (error) {
+      throw error;
+    }
+
     await prisma.file.delete({
       where: { id: +req.params.id },
     });

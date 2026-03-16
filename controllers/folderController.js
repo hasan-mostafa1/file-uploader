@@ -5,8 +5,11 @@ const {
   validationResult,
 } = require("express-validator");
 const auth = require("../middlewares/authMiddleware");
+const checkFolder = require("../middlewares/checkFolderMiddleware");
 const { prisma } = require("../lib/prisma");
 const upload = require("../config/multer");
+const supabase = require("../lib/supabase");
+const { decode } = require("base64-arraybuffer");
 
 const validateFolder = [
   body("name")
@@ -17,31 +20,6 @@ const validateFolder = [
     .withMessage("name can't be empty")
     .isString()
     .withMessage("name must be a string"),
-];
-
-const folderExists = [
-  param("id")
-    .exists()
-    .withMessage("folder id is required")
-    .trim()
-    .notEmpty()
-    .withMessage("folder id can't be empty")
-    .custom(async (value) => {
-      const existingFolder = await prisma.folder.findUnique({
-        where: { id: +value },
-      });
-      if (!existingFolder) {
-        throw new Error("Unvalid folder id!");
-      }
-      return true;
-    }),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(404).send(errors.array()[0].msg);
-    }
-    next();
-  },
 ];
 
 module.exports.store = [
@@ -68,7 +46,7 @@ module.exports.store = [
 
 module.exports.storeChildFolders = [
   auth,
-  folderExists,
+  checkFolder,
   validateFolder,
   async (req, res) => {
     const errors = validationResult(req);
@@ -77,6 +55,7 @@ module.exports.storeChildFolders = [
         where: { id: +req.params.id },
         include: {
           folders: true,
+          files: true,
         },
       });
       res
@@ -85,6 +64,7 @@ module.exports.storeChildFolders = [
     }
     const { name } = matchedData(req);
     const parentId = +req.params.id;
+
     await prisma.folder.create({
       data: {
         name: name,
@@ -103,7 +83,7 @@ module.exports.storeChildFolders = [
 
 module.exports.show = [
   auth,
-  folderExists,
+  checkFolder,
   async (req, res) => {
     const folder = await prisma.folder.findUnique({
       where: { id: +req.params.id },
@@ -112,14 +92,13 @@ module.exports.show = [
         files: true,
       },
     });
-
     res.render("folder/show", { folder: folder });
   },
 ];
 
 module.exports.edit = [
   auth,
-  folderExists,
+  checkFolder,
   async (req, res) => {
     const folder = await prisma.folder.findUnique({
       where: { id: +req.params.id },
@@ -130,7 +109,7 @@ module.exports.edit = [
 
 module.exports.update = [
   auth,
-  folderExists,
+  checkFolder,
   validateFolder,
   async (req, res) => {
     const errors = validationResult(req);
@@ -138,28 +117,38 @@ module.exports.update = [
       return res.status(400).render("folder/edit", { errors: errors.array() });
     }
     const { name } = matchedData(req);
-    const folder = await prisma.folder.update({
+    const UpdatedFolder = await prisma.folder.update({
       data: {
         name: name,
       },
       where: { id: +req.params.id },
     });
 
-    res.redirect(`/folders/${folder.id}`);
+    res.redirect(`/folders/${UpdatedFolder.id}`);
   },
 ];
 
 module.exports.uploadFile = [
   auth,
-  folderExists,
+  checkFolder,
   upload.single("file"),
   async (req, res) => {
+    const fileBase64 = decode(req.file.buffer.toString("base64"));
+    const { data, error } = await supabase.storage
+      .from("uploads")
+      .upload(req.file.originalname, fileBase64, {
+        contentType: req.file.mimetype,
+      });
+    if (error) {
+      throw error;
+    }
+
     await prisma.file.create({
       data: {
-        fileName: req.file.filename,
         originalName: req.file.originalname,
         contentType: req.file.mimetype,
         size: req.file.size,
+        path: data.path,
         folderId: +req.params.id,
         ownerId: req.user.id,
       },
@@ -171,7 +160,7 @@ module.exports.uploadFile = [
 
 module.exports.destroy = [
   auth,
-  folderExists,
+  checkFolder,
   async (req, res) => {
     await prisma.folder.delete({
       where: { id: +req.params.id },
