@@ -31,7 +31,7 @@ module.exports.uploadFile = [
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      res
+      return res
         .status(400)
         .render("home", { user: req.user, fileErrors: errors.array() });
     }

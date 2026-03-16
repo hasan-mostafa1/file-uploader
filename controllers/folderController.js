@@ -46,7 +46,7 @@ module.exports.store = [
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      res
+      return res
         .status(400)
         .render("home", { user: req.user, errors: errors.array() });
     }
@@ -78,7 +78,7 @@ module.exports.storeChildFolders = [
           files: true,
         },
       });
-      res
+      return res
         .status(400)
         .render("folder/show", { errors: errors.array(), folder: folder });
     }
@@ -156,7 +156,7 @@ module.exports.uploadFile = [
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      res
+      return res
         .status(400)
         .render("home", { user: req.user, fileErrors: errors.array() });
     }
